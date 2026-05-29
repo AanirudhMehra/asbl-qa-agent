@@ -1,0 +1,25 @@
+# Environment & secrets
+.env
+.env.*
+google_service_account.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Logs
+logs/
+*.log
+
+# Lock files
+/tmp/asbl_qa_pipeline.lock
+
+# OS
+.DS_Store
+
+# Old results (local only)
+results/

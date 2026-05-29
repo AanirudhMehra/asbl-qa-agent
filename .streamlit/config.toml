@@ -1,0 +1,20 @@
+[server]
+headless = true
+port = 8501
+enableCORS = false
+enableXsrfProtection = true
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+# ASBL brand colours
+primaryColor        = "#e86219"   # ASBL orange — buttons, sliders, active elements
+backgroundColor     = "#f7f9fc"   # light page background
+secondaryBackgroundColor = "#eef1f7"  # sidebar + cards
+textColor           = "#1a1a2e"   # primary text
+font                = "sans serif"
+
+[runner]
+# Suppress the "running..." badge on rerun
+fastReruns = true

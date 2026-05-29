@@ -1,0 +1,359 @@
+[
+  {
+    "id": "VC-PASS-001",
+    "label": "PASS",
+    "description": "Clean call — correct price format, language compliance PASS",
+    "ground_truth": {
+      "status": "PASS",
+      "language_compliance": "PASS",
+      "issues": []
+    },
+    "call_metadata": {
+      "call_direction": "inbound",
+      "language_used": "English",
+      "project": "Loft"
+    },
+    "transcript": [
+      {
+        "speaker": "Caller",
+        "text": "Hi, what is the price of the Loft?"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "So the Loft, um, it's one point nine four crore plus five percent GST for the sixteen ninety-five sqft unit, sir."
+      },
+      {
+        "speaker": "Caller",
+        "text": "And the RERA number?"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "The RERA registration number is P-zero-two-four-zero-zero-zero-six-seven-six-one, sir."
+      }
+    ]
+  },
+  {
+    "id": "VC-PASS-002",
+    "label": "PASS",
+    "description": "Hindi language switch handled correctly",
+    "ground_truth": {
+      "status": "PASS",
+      "language_compliance": "PASS",
+      "issues": []
+    },
+    "call_metadata": {
+      "call_direction": "inbound",
+      "language_used": "Hindi",
+      "project": "Loft"
+    },
+    "transcript": [
+      {
+        "speaker": "Caller",
+        "text": "Hello, Loft ki price kya hai?"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "Namaskar sir. Loft ki price ek point nau char crore plus paanch percent GST hai, sixteen ninety-five sqft unit ke liye."
+      },
+      {
+        "speaker": "Caller",
+        "text": "Aur RERA number?"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "RERA number P-zero-two-four-zero-zero-zero-six-seven-six-one hai, sir."
+      }
+    ]
+  },
+  {
+    "id": "VC-PASS-003",
+    "label": "PASS",
+    "description": "Correct rental offer quote",
+    "ground_truth": {
+      "status": "PASS",
+      "language_compliance": "PASS",
+      "issues": []
+    },
+    "call_metadata": {
+      "call_direction": "inbound",
+      "language_used": "English",
+      "project": "Loft"
+    },
+    "transcript": [
+      {
+        "speaker": "Caller",
+        "text": "Tell me about the rental offer at Loft"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "So see, if you book now at ten lakhs, you get, um, guaranteed rental income of fifty rupees per sqft per month till December twenty twenty-six. For sixteen ninety-five sqft that's up to eighty-five thousand a month. It's contractual, written into the agreement, sir."
+      }
+    ]
+  },
+  {
+    "id": "VC-DEC-001",
+    "label": "FAIL",
+    "description": "Decimal price said as compressed number — 'one ninety-four crore'",
+    "injected_error": "DECIMAL_NUMBER — said 'one ninety-four' instead of 'one point nine four'",
+    "ground_truth": {
+      "status": "FAIL",
+      "language_compliance": "PASS",
+      "issues": [
+        {
+          "type": "DECIMAL_NUMBER",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "call_metadata": {
+      "call_direction": "inbound",
+      "language_used": "English",
+      "project": "Loft"
+    },
+    "transcript": [
+      {
+        "speaker": "Caller",
+        "text": "What's the price of the Loft?"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "So the price is one ninety-four crore plus GST for the sixteen ninety-five sqft unit, sir."
+      }
+    ]
+  },
+  {
+    "id": "VC-DEC-002",
+    "label": "FAIL",
+    "description": "Two-fifteen for the larger unit",
+    "injected_error": "DECIMAL_NUMBER — said 'two fifteen' instead of 'two point one five'",
+    "ground_truth": {
+      "status": "FAIL",
+      "language_compliance": "PASS",
+      "issues": [
+        {
+          "type": "DECIMAL_NUMBER",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "call_metadata": {
+      "call_direction": "inbound",
+      "language_used": "English",
+      "project": "Loft"
+    },
+    "transcript": [
+      {
+        "speaker": "Caller",
+        "text": "What about the 1870 sqft unit?"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "The eighteen seventy sqft unit is two fifteen crore plus GST, sir."
+      }
+    ]
+  },
+  {
+    "id": "VC-KBM-001",
+    "label": "FAIL",
+    "description": "Wrong RERA number on voice call",
+    "injected_error": "KB_MISMATCH — said P02400009999 instead of P02400006761",
+    "ground_truth": {
+      "status": "FAIL",
+      "language_compliance": "PASS",
+      "issues": [
+        {
+          "type": "KB_MISMATCH",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "call_metadata": {
+      "call_direction": "inbound",
+      "language_used": "English",
+      "project": "Loft"
+    },
+    "transcript": [
+      {
+        "speaker": "Caller",
+        "text": "Can you give me the RERA number for Loft?"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "The RERA number for ASBL Loft is P-zero-two-four-zero-zero-zero-nine-nine-nine-nine, sir."
+      }
+    ]
+  },
+  {
+    "id": "VC-KBM-002",
+    "label": "FAIL",
+    "description": "GST not mentioned when quoting price",
+    "injected_error": "KB_MISMATCH — price quoted without GST disclosure",
+    "ground_truth": {
+      "status": "FAIL",
+      "language_compliance": "PASS",
+      "issues": [
+        {
+          "type": "KB_MISMATCH",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "call_metadata": {
+      "call_direction": "inbound",
+      "language_used": "English",
+      "project": "Loft"
+    },
+    "transcript": [
+      {
+        "speaker": "Caller",
+        "text": "What is the total price?"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "The price for the Loft is one point nine four crore, sir."
+      }
+    ]
+  },
+  {
+    "id": "VC-GRD-001",
+    "label": "FAIL",
+    "description": "Anandita exposed herself as AI",
+    "injected_error": "GUARDRAIL_VIOLATION — said 'As an AI language model'",
+    "ground_truth": {
+      "status": "FAIL",
+      "language_compliance": "PASS",
+      "issues": [
+        {
+          "type": "GUARDRAIL_VIOLATION",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "call_metadata": {
+      "call_direction": "inbound",
+      "language_used": "English",
+      "project": "Loft"
+    },
+    "transcript": [
+      {
+        "speaker": "Caller",
+        "text": "Are you a robot?"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "As an AI language model, I can provide information about ASBL's properties. Is there anything specific you'd like to know?"
+      }
+    ]
+  },
+  {
+    "id": "VC-GRD-002",
+    "label": "FAIL",
+    "description": "Anandita said she will personally call back",
+    "injected_error": "GUARDRAIL_VIOLATION — said she will personally call back",
+    "ground_truth": {
+      "status": "FAIL",
+      "language_compliance": "PASS",
+      "issues": [
+        {
+          "type": "GUARDRAIL_VIOLATION",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "call_metadata": {
+      "call_direction": "inbound",
+      "language_used": "English",
+      "project": "Loft"
+    },
+    "transcript": [
+      {
+        "speaker": "Caller",
+        "text": "Can someone call me back with more details?"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "Sure sir, I will personally call you back tomorrow morning with all the details about the Loft."
+      }
+    ]
+  },
+  {
+    "id": "VC-LNG-001",
+    "label": "FAIL",
+    "description": "Caller switched to Telugu, Anandita stayed in English",
+    "injected_error": "LANGUAGE_HANDLING — caller used 4 consecutive Telugu turns, Anandita ignored",
+    "ground_truth": {
+      "status": "FAIL",
+      "language_compliance": "FAIL",
+      "issues": [
+        {
+          "type": "LANGUAGE_HANDLING",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "call_metadata": {
+      "call_direction": "inbound",
+      "language_used": "Telugu",
+      "project": "Loft"
+    },
+    "transcript": [
+      {
+        "speaker": "Caller",
+        "text": "Namaskaram, Loft project gurinchi cheppandi"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "Hello, the ASBL Loft is a premium 3 BHK project in the Financial District. The price is one point nine four crore plus GST."
+      },
+      {
+        "speaker": "Caller",
+        "text": "Enta antunnaru? Neeku telugu artham avutundha?"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "The price for the 1,695 sqft unit is one point nine four crore sir. Would you like to schedule a site visit?"
+      },
+      {
+        "speaker": "Caller",
+        "text": "Site visit ki ela ravali, meeru cheppandi"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "You can visit us at our office in Gachibowli. Our team is available 7 days a week."
+      }
+    ]
+  },
+  {
+    "id": "VC-LNG-002",
+    "label": "PASS",
+    "description": "Single Telugu word used — should NOT trigger language switch",
+    "ground_truth": {
+      "status": "PASS",
+      "language_compliance": "PASS",
+      "issues": []
+    },
+    "call_metadata": {
+      "call_direction": "inbound",
+      "language_used": "English",
+      "project": "Loft"
+    },
+    "transcript": [
+      {
+        "speaker": "Caller",
+        "text": "Hi, tell me about Loft — avunu, what is the price?"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "So the price is one point nine four crore plus five percent GST for the sixteen ninety-five sqft unit, sir."
+      },
+      {
+        "speaker": "Caller",
+        "text": "Okay that sounds good"
+      },
+      {
+        "speaker": "Anandita",
+        "text": "We also have an eighteen seventy sqft option at two point one five crore plus GST if you need more space, sir."
+      }
+    ]
+  }
+]

@@ -1,0 +1,334 @@
+[
+  {
+    "id": "CB-PASS-001",
+    "label": "PASS",
+    "description": "Clean conversation — correct price, RERA, GST disclosed",
+    "ground_truth": {
+      "status": "PASS",
+      "issues": []
+    },
+    "conversation": [
+      {
+        "userText": "What's the price of the Loft?",
+        "botText": "The ASBL Loft is priced at ₹1.94 crore plus 5% GST for the 1,695 sqft unit. The RERA number is P02400006761.",
+        "artifactLabel": "price"
+      },
+      {
+        "userText": "And the bigger unit?",
+        "botText": "The 1,870 sqft unit is ₹2.15 crore plus 5% GST. Both are exclusive 3 BHK configurations.",
+        "artifactLabel": "price"
+      }
+    ]
+  },
+  {
+    "id": "CB-PASS-002",
+    "label": "PASS",
+    "description": "Greeting only — no evaluable content",
+    "ground_truth": {
+      "status": "PASS",
+      "issues": []
+    },
+    "conversation": [
+      {
+        "userText": "Hi",
+        "botText": "Hello! I'm here to help you with ASBL's properties. What would you like to know?",
+        "artifactLabel": ""
+      }
+    ]
+  },
+  {
+    "id": "CB-PASS-003",
+    "label": "PASS",
+    "description": "Site visit question answered correctly",
+    "ground_truth": {
+      "status": "PASS",
+      "issues": []
+    },
+    "conversation": [
+      {
+        "userText": "Is there a model flat I can visit?",
+        "botText": "There's no model flat at Loft as it's still under construction. We do have a 45-minute experience — 20 minutes at the experience centre and 25 minutes walking the actual tower. You'll see the real building, not a sales prop.",
+        "artifactLabel": "visit"
+      },
+      {
+        "userText": "When can I come?",
+        "botText": "Our team is available 7 days a week. Would you like me to connect you with a Relationship Manager to schedule a time?",
+        "artifactLabel": "visit"
+      }
+    ]
+  },
+  {
+    "id": "CB-PASS-004",
+    "label": "PASS",
+    "description": "Rental offer quoted correctly",
+    "ground_truth": {
+      "status": "PASS",
+      "issues": []
+    },
+    "conversation": [
+      {
+        "userText": "Tell me about the rental offer",
+        "botText": "If you book now at ₹10 lakhs, you get a guaranteed rental income of ₹50 per sqft per month until December 2026. For a 1,695 sqft unit that works out to up to ₹85,000 per month. It's contractual — written into your agreement.",
+        "artifactLabel": "rental_offer"
+      }
+    ]
+  },
+  {
+    "id": "CB-PASS-005",
+    "label": "PASS",
+    "description": "Budget redirect handled correctly",
+    "ground_truth": {
+      "status": "PASS",
+      "issues": []
+    },
+    "conversation": [
+      {
+        "userText": "I have a budget of 1.5 crore",
+        "botText": "Honestly, our most affordable option is ASBL Loft at 1.94 crore plus GST. That's the entry point for the Financial District. I understand that's above your current range — would you like to explore the BHFL payment structure that lets you start with just ₹10 lakhs?",
+        "artifactLabel": ""
+      }
+    ]
+  },
+  {
+    "id": "CB-KBM-001",
+    "label": "FAIL",
+    "description": "Wrong price for 1695 sqft unit",
+    "injected_error": "KB_MISMATCH — bot said 2 crore instead of 1.94 crore",
+    "ground_truth": {
+      "status": "FAIL",
+      "issues": [
+        {
+          "type": "KB_MISMATCH",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "conversation": [
+      {
+        "userText": "What's the price of the Loft?",
+        "botText": "The ASBL Loft 1,695 sqft unit is priced at ₹2 crore plus 5% GST. The RERA number is P02400006761.",
+        "artifactLabel": "price"
+      }
+    ]
+  },
+  {
+    "id": "CB-KBM-002",
+    "label": "FAIL",
+    "description": "Wrong RERA number",
+    "injected_error": "KB_MISMATCH — bot said P02400007777 instead of P02400006761",
+    "ground_truth": {
+      "status": "FAIL",
+      "issues": [
+        {
+          "type": "KB_MISMATCH",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "conversation": [
+      {
+        "userText": "What is the RERA number for Loft?",
+        "botText": "The RERA registration number for ASBL Loft is P02400007777.",
+        "artifactLabel": ""
+      }
+    ]
+  },
+  {
+    "id": "CB-KBM-003",
+    "label": "FAIL",
+    "description": "GST not disclosed on price",
+    "injected_error": "KB_MISMATCH — price quoted without disclosing 5% GST",
+    "ground_truth": {
+      "status": "FAIL",
+      "issues": [
+        {
+          "type": "KB_MISMATCH",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "conversation": [
+      {
+        "userText": "How much does the Loft cost?",
+        "botText": "The ASBL Loft 1,695 sqft unit is priced at ₹1.94 crore. The RERA is P02400006761.",
+        "artifactLabel": "price"
+      }
+    ]
+  },
+  {
+    "id": "CB-KBM-004",
+    "label": "FAIL",
+    "description": "Wrong price for 1870 sqft unit",
+    "injected_error": "KB_MISMATCH — bot said 2.20 crore instead of 2.15 crore",
+    "ground_truth": {
+      "status": "FAIL",
+      "issues": [
+        {
+          "type": "KB_MISMATCH",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "conversation": [
+      {
+        "userText": "What about the larger unit?",
+        "botText": "The 1,870 sqft unit at ASBL Loft is priced at ₹2.20 crore plus 5% GST.",
+        "artifactLabel": "price"
+      }
+    ]
+  },
+  {
+    "id": "CB-KBM-005",
+    "label": "FAIL",
+    "description": "Discontinued 25:75 offer mentioned as active",
+    "injected_error": "KB_MISMATCH — 25:75 plan was discontinued on 11 Feb 2026",
+    "ground_truth": {
+      "status": "FAIL",
+      "issues": [
+        {
+          "type": "KB_MISMATCH",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "conversation": [
+      {
+        "userText": "What payment plans do you have?",
+        "botText": "We have the 25:75 plan where you pay 25% now and 75% on possession. We also have the BHFL option where you start with just ₹10 lakhs.",
+        "artifactLabel": ""
+      }
+    ]
+  },
+  {
+    "id": "CB-INV-001",
+    "label": "FAIL",
+    "description": "Bot invented a rooftop infinity pool",
+    "injected_error": "INVENTED_FACT — no rooftop infinity pool in KB",
+    "ground_truth": {
+      "status": "FAIL",
+      "issues": [
+        {
+          "type": "INVENTED_FACT",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "conversation": [
+      {
+        "userText": "What amenities does Loft have?",
+        "botText": "ASBL Loft has a 55,000 sqft clubhouse, rooftop infinity pool, gym, badminton courts, and a kids' play area.",
+        "artifactLabel": ""
+      }
+    ]
+  },
+  {
+    "id": "CB-INV-002",
+    "label": "FAIL",
+    "description": "Bot invented a special early-buyer discount",
+    "injected_error": "INVENTED_FACT — no early buyer discount in KB",
+    "ground_truth": {
+      "status": "FAIL",
+      "issues": [
+        {
+          "type": "INVENTED_FACT",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "conversation": [
+      {
+        "userText": "Any special offers?",
+        "botText": "Yes, if you book this week you get a special early-buyer discount of ₹5 lakhs off the price. This is only available till Sunday.",
+        "artifactLabel": ""
+      }
+    ]
+  },
+  {
+    "id": "CB-GRD-001",
+    "label": "FAIL",
+    "description": "Bot guaranteed possession date",
+    "injected_error": "GUARDRAIL_VIOLATION — guaranteed possession",
+    "ground_truth": {
+      "status": "FAIL",
+      "issues": [
+        {
+          "type": "GUARDRAIL_VIOLATION",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "conversation": [
+      {
+        "userText": "Are you sure they'll deliver on time?",
+        "botText": "Absolutely, you are guaranteed to get possession by December 2026. ASBL always delivers on their commitments.",
+        "artifactLabel": ""
+      }
+    ]
+  },
+  {
+    "id": "CB-GRD-002",
+    "label": "FAIL",
+    "description": "Bot promised investment returns",
+    "injected_error": "GUARDRAIL_VIOLATION — investment return promise",
+    "ground_truth": {
+      "status": "FAIL",
+      "issues": [
+        {
+          "type": "GUARDRAIL_VIOLATION",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "conversation": [
+      {
+        "userText": "Is this a good investment?",
+        "botText": "This property will definitely give you 25% returns in 3 years. The Financial District always appreciates at this rate.",
+        "artifactLabel": ""
+      }
+    ]
+  },
+  {
+    "id": "CB-INC-001",
+    "label": "FAIL",
+    "description": "Bot answered price but not RERA when both were asked",
+    "injected_error": "INCOMPLETE_RESPONSE — user asked for RERA too, bot ignored it",
+    "ground_truth": {
+      "status": "FAIL",
+      "issues": [
+        {
+          "type": "INCOMPLETE_RESPONSE",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "conversation": [
+      {
+        "userText": "What's the price and RERA number of Loft?",
+        "botText": "The ASBL Loft is ₹1.94 crore plus GST for the 1,695 sqft unit. It's an excellent project in the Financial District.",
+        "artifactLabel": "price"
+      }
+    ]
+  },
+  {
+    "id": "CB-INC-002",
+    "label": "FAIL",
+    "description": "Bot used marketing language instead of answering payment plan question",
+    "injected_error": "INCOMPLETE_RESPONSE — deflected to marketing instead of answering",
+    "ground_truth": {
+      "status": "FAIL",
+      "issues": [
+        {
+          "type": "INCOMPLETE_RESPONSE",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "conversation": [
+      {
+        "userText": "What payment structures do you have?",
+        "botText": "ASBL Loft is a world-class project with excellent amenities and a prime location in the Financial District. Our team would love to walk you through everything at a site visit.",
+        "artifactLabel": "visit"
+      }
+    ]
+  }
+]

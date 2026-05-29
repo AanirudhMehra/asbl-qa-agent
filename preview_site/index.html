@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASBL QA Agent — Implementation Document</title>
+<style>
+  :root {
+    --dark-blue: #1A376C;
+    --mid-blue: #1F5C99;
+    --orange: #E86C1E;
+    --light-bg: #F7F9FC;
+    --border: #DDE3ED;
+    --text: #1A1A2E;
+    --muted: #5A6070;
+    --code-bg: #F0F2F5;
+    --white: #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--light-bg);
+    color: var(--text);
+    line-height: 1.65;
+  }
+
+  /* ── Sticky header ── */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--dark-blue);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+    height: 56px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .topbar-title { color: #fff; font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+  .topbar-title span { color: #7EB8F7; font-weight: 400; }
+
+  .download-btn {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--orange); color: #fff;
+    padding: 8px 20px; border-radius: 6px;
+    text-decoration: none; font-size: 13px; font-weight: 600;
+    transition: background 0.2s, transform 0.1s;
+    border: none; cursor: pointer;
+  }
+  .download-btn:hover { background: #c95a14; transform: translateY(-1px); }
+  .download-btn svg { flex-shrink: 0; }
+
+  /* ── Layout ── */
+  .layout { display: flex; min-height: calc(100vh - 56px); }
+
+  /* ── Sidebar TOC ── */
+  .sidebar {
+    width: 240px; flex-shrink: 0;
+    background: var(--white);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    position: sticky; top: 56px;
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+  }
+  .sidebar-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+    color: var(--muted); text-transform: uppercase;
+    padding: 0 20px 10px;
+  }
+  .toc-item {
+    display: block; padding: 7px 20px;
+    color: var(--muted); font-size: 12.5px;
+    text-decoration: none; border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .toc-item:hover { color: var(--dark-blue); background: #EEF3FA; border-left-color: var(--mid-blue); }
+  .toc-item.active { color: var(--dark-blue); font-weight: 600; border-left-color: var(--orange); background: #FFF5EE; }
+  .toc-num { color: var(--orange); font-weight: 700; margin-right: 6px; font-size: 11px; }
+
+  /* ── Main content ── */
+  .main {
+    flex: 1;
+    max-width: 900px;
+    padding: 40px 48px 80px;
+    margin: 0 auto;
+  }
+
+  /* ── Cover ── */
+  .cover {
+    text-align: center;
+    padding: 60px 0 50px;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 56px;
+  }
+  .cover h1 {
+    font-size: 36px; font-weight: 800;
+    color: var(--dark-blue); line-height: 1.2;
+  }
+  .cover .subtitle {
+    font-size: 16px; color: var(--mid-blue);
+    margin-top: 10px; font-weight: 500;
+  }
+  .cover .tagline {
+    font-size: 13px; color: var(--muted);
+    margin-top: 8px; font-style: italic;
+  }
+  .cover .meta {
+    margin-top: 16px;
+    display: inline-flex; gap: 12px;
+  }
+  .badge {
+    background: var(--dark-blue); color: #fff;
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  }
+  .badge.orange { background: var(--orange); }
+
+  /* ── Section headings ── */
+  .section { margin-bottom: 52px; scroll-margin-top: 72px; }
+  .section-title {
+    font-size: 22px; font-weight: 700;
+    color: var(--dark-blue);
+    padding-bottom: 10px;
+    border-bottom: 3px solid var(--dark-blue);
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-num {
+    background: var(--dark-blue); color: #fff;
+    font-size: 12px; font-weight: 700;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  h3 {
+    font-size: 15px; font-weight: 700;
+    color: var(--mid-blue); margin: 24px 0 10px;
+  }
+  h4 {
+    font-size: 13px; font-weight: 700;
+    color: var(--orange); margin: 18px 0 8px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  p { margin-bottom: 12px; font-size: 14px; }
+
+  /* ── Notice boxes ── */
+  .notice {
+    border-radius: 8px; padding: 14px 18px;
+    margin: 18px 0; font-size: 13.5px; font-weight: 500;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .notice.blue { background: #D6E4F7; color: var(--dark-blue); border-left: 4px solid var(--dark-blue); }
+  .notice.orange { background: #FFF3E0; color: #7A3500; border-left: 4px solid var(--orange); }
+  .notice-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Code blocks ── */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--mid-blue);
+    border-radius: 6px;
+    padding: 16px 18px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    overflow-x: auto;
+    margin: 14px 0;
+    color: #2D3748;
+    white-space: pre;
+  }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; margin: 14px 0 20px; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--dark-blue); }
+  thead th {
+    color: #fff; font-weight: 600; font-size: 12px;
+    padding: 10px 14px; text-align: left;
+    white-space: nowrap;
+  }
+  tbody tr:nth-child(even) { background: #F2F6FC; }
+  tbody tr:hover { background: #E8F0FB; }
+  tbody td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .sev-high   { color: #C0392B; font-weight: 700; }
+  .sev-med    { color: #D68910; font-weight: 700; }
+  .sev-low    { color: #27AE60; font-weight: 700; }
+
+  /* ── Bullets ── */
+  ul { padding-left: 22px; margin: 10px 0; }
+  ul li { margin-bottom: 6px; font-size: 14px; }
+
+  /* ── File path ── */
+  .filepath {
+    display: inline-block;
+    background: #E8F0FB; color: var(--dark-blue);
+    font-family: monospace; font-size: 12.5px;
+    padding: 2px 8px; border-radius: 4px;
+    border: 1px solid #C5D8F0;
+    margin-bottom: 12px;
+  }
+
+  /* ── Divider ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ── Score card row ── */
+  .score-cards {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+    margin: 14px 0;
+  }
+  .score-card {
+    border-radius: 8px; padding: 12px 10px; text-align: center;
+    border: 1px solid var(--border);
+  }
+  .score-card .num { font-size: 22px; font-weight: 800; color: var(--dark-blue); }
+  .score-card .label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* ── Impact strip ── */
+  .impact-strip {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+    margin: 20px 0 28px;
+  }
+  .impact-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--dark-blue);
+    border-radius: 8px; padding: 16px;
+  }
+  .impact-card.orange { border-top-color: var(--orange); }
+  .impact-card .ic-num { font-size: 28px; font-weight: 800; color: var(--dark-blue); line-height: 1; }
+  .impact-card.orange .ic-num { color: var(--orange); }
+  .impact-card .ic-label { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  /* ── Formula box ── */
+  .formula {
+    background: linear-gradient(135deg, #EEF4FF 0%, #F5F0FF 100%);
+    border: 1px solid #C9D8F5;
+    border-radius: 8px; padding: 16px 20px;
+    margin: 14px 0; font-family: monospace; font-size: 13px;
+    color: var(--dark-blue);
+    line-height: 1.8;
+  }
+
+  /* ── Agent flow ── */
+  .agent-flow {
+    display: flex; gap: 0; margin: 20px 0; align-items: stretch;
+    border-radius: 8px; overflow: hidden; border: 1px solid var(--border);
+  }
+  .agent-step {
+    flex: 1; padding: 14px 12px; text-align: center;
+    background: var(--white); border-right: 1px solid var(--border);
+    position: relative;
+  }
+  .agent-step:last-child { border-right: none; }
+  .agent-step .step-num {
+    font-size: 11px; font-weight: 700; color: var(--orange);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .agent-step .step-name { font-size: 13px; font-weight: 700; color: var(--dark-blue); margin-top: 4px; }
+  .agent-step .step-desc { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .agent-step.active { background: var(--dark-blue); }
+  .agent-step.active .step-num { color: #7EB8F7; }
+  .agent-step.active .step-name { color: #fff; }
+  .agent-step.active .step-desc { color: #AAC4E8; }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main { padding: 24px 20px 60px; }
+    .impact-strip { grid-template-columns: 1fr; }
+    .score-cards { grid-template-columns: repeat(3, 1fr); }
+    .agent-flow { flex-direction: column; }
+    .agent-step { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Top bar ── -->
+<header class="topbar">
+  <div class="topbar-title">ASBL QA Agent &nbsp;<span>/ Implementation Document</span></div>
+  <a class="download-btn" href="ASBL_QA_Agent_Implementation.docx" download>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+    Download Word Doc (.docx)
+  </a>
+</header>
+
+<div class="layout">
+
+<!-- ── Sidebar ── -->
+<nav class="sidebar">
+  <div class="sidebar-label">Contents</div>
+  <a class="toc-item" href="#s1"><span class="toc-num">01</span>What This System Is</a>
+  <a class="toc-item" href="#s2"><span class="toc-num">02</span>System Architecture</a>
+  <a class="toc-item" href="#s3"><span class="toc-num">03</span>Agent 1 — Chatbot QA</a>
+  <a class="toc-item" href="#s4"><span class="toc-num">04</span>Agent 2 — Voice QA</a>
+  <a class="toc-item" href="#s5"><span class="toc-num">05</span>Agent 3 — Analytics</a>
+  <a class="toc-item" href="#s6"><span class="toc-num">06</span>Agent 4 — Feedback</a>
+  <a class="toc-item" href="#s7"><span class="toc-num">07</span>Agent 5 — Recommendation</a>
+  <a class="toc-item" href="#s8"><span class="toc-num">08</span>The Runner</a>
+  <a class="toc-item" href="#s9"><span class="toc-num">09</span>Outcomes Config</a>
+  <a class="toc-item" href="#s10"><span class="toc-num">10</span>Prompt File System</a>
+  <a class="toc-item" href="#s11"><span class="toc-num">11</span>Results DB Schema</a>
+  <a class="toc-item" href="#s12"><span class="toc-num">12</span>Prod DB Reference</a>
+  <a class="toc-item" href="#s13"><span class="toc-num">13</span>Band Scoring System</a>
+  <a class="toc-item" href="#s14"><span class="toc-num">14</span>LLM Wrapper</a>
+  <a class="toc-item" href="#s15"><span class="toc-num">15</span>File Structure</a>
+  <a class="toc-item" href="#s16"><span class="toc-num">16</span>Change Without Code</a>
+  <a class="toc-item" href="#s17"><span class="toc-num">17</span>How to Run</a>
+  <a class="toc-item" href="#s18"><span class="toc-num">18</span>ASBL Project Facts</a>
+  <a class="toc-item" href="#s19"><span class="toc-num">19</span>Pending Items</a>
+</nav>
+
+<!-- ── Main ── -->
+<main class="main">
+
+  <!-- Cover -->
+  <div class="cover">
+    <h1>ASBL QA Agent</h1>
+    <div class="subtitle">Full Implementation Document</div>
+    <div class="tagline">What we built · How it works · Every formula · Every schema</div>
+    <div class="meta">
+      <span class="badge">May 2026</span>
+      <span class="badge orange">Confidential — ASBL Internal</span>
+    </div>
+  </div>
+
+  <!-- S1 -->
+  <section class="section" id="s1">
+    <div class="section-title"><div class="section-num">1</div>What This System Is</div>
+
+    <p>ASBL operates two AI products that talk to customers every day:</p>
+    <ul>
+      <li><strong>A text chatbot</strong> on the ASBL website — answers buyer queries about projects, prices, and availability.</li>
+      <li><strong>A voice agent called Anandita</strong> — handles inbound and outbound phone calls from prospective buyers.</li>
+    </ul>
+
+    <p style="margin-top:14px">This QA system runs automatically every 4 hours. With zero human effort it:</p>
+    <ul>
+      <li>Reads every chatbot conversation and phone call from the last 4 hours</li>
+      <li>Checks each one for errors — wrong prices, wrong RERA numbers, invented facts, missed leads, language failures</li>
+      <li>Validates whether business goals (site visits, OTP completions, affordability checks) are actually being met</li>
+      <li>Identifies every problem — single-agent bugs, cross-agent patterns, scoring miscalibrations</li>
+      <li>Tells the team exactly which file to open, what to change, and what will improve once the fix is made</li>
+    </ul>
+
+    <div class="notice orange" style="margin-top:20px">
+      <span class="notice-icon">⚡</span>
+      <span><strong>Business Impact:</strong> The system catches pricing errors before they reach customers, flags wasted Meta ad spend in real time, and ensures Anandita always speaks the right language — without anyone reviewing calls manually.</span>
+    </div>
+
+    <div class="impact-strip">
+      <div class="impact-card">
+        <div class="ic-num">5</div>
+        <div class="ic-label">Agents running every 4 hours</div>
+      </div>
+      <div class="impact-card orange">
+        <div class="ic-num">0</div>
+        <div class="ic-label">Writes to production MongoDB. Ever.</div>
+      </div>
+      <div class="impact-card">
+        <div class="ic-num">₹0</div>
+        <div class="ic-label">LLM cost — runs fully offline via Ollama</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- S2 -->
+  <section class="section" id="s2">
+    <div class="section-title"><div class="section-num">2</div>System Architecture</div>
+
+    <h3>Two Separate MongoDB Clusters</h3>
+    <p>The system is built around one strict rule: <strong>production data is never written to.</strong> Two completely separate MongoDB connections enforce this.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Connection</th><th>Env Variable</th><th>Used For</th><th>Write Access</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Production MongoDB</strong></td><td>MONGO_URI_PROD</td><td>Read chatbot conversations, call transcripts, analytics scores</td><td style="color:#C0392B;font-weight:700">NEVER</td></tr>
+          <tr><td><strong>Results MongoDB</strong></td><td>MONGO_URI_RESULTS</td><td>Store QA results, health scores, recommendations, feedback</td><td style="color:#27AE60;font-weight:700">Yes — QA output only</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>The 5-Agent Pipeline</h3>
+    <p>runner.py fires every 4 hours and runs all 5 agents in strict sequence:</p>
+
+    <div class="agent-flow">
+      <div class="agent-step">
+        <div class="step-num">Step 1</div>
+        <div class="step-name">Chatbot QA</div>
+        <div class="step-desc">Score conversations</div>
+      </div>
+      <div class="agent-step">
+        <div class="step-num">Step 2</div>
+        <div class="step-name">Voice QA</div>
+        <div class="step-desc">Score calls</div>
+      </div>
+      <div class="agent-step">
+        <div class="step-num">Step 3</div>
+        <div class="step-name">Analytics</div>
+        <div class="step-desc">Check band rates</div>
+      </div>
+      <div class="agent-step active">
+        <div class="step-num">Step 4</div>
+        <div class="step-name">Feedback</div>
+        <div class="step-desc">Find problems</div>
+      </div>
+      <div class="agent-step">
+        <div class="step-num">Step 5</div>
+        <div class="step-name">Recommendation</div>
+        <div class="step-desc">Generate fixes</div>
+      </div>
+    </div>
+
+    <h3>The LLM</h3>
+    <ul>
+      <li><strong>Model:</strong> llama3.1:8b via Ollama</li>
+      <li><strong>Endpoint:</strong> http://localhost:11434 — runs on your Mac, fully offline</li>
+      <li><strong>Temperature:</strong> 0.1 (near-deterministic output)</li>
+      <li><strong>Max tokens:</strong> 1,500 per call</li>
+      <li><strong>Cost:</strong> ₹0 — runs on local hardware</li>
+    </ul>
+  </section>
+
+  <!-- S3 -->
+  <section class="section" id="s3">
+    <div class="section-title"><div class="section-num">3</div>Agent 1 — Chatbot QA</div>
+    <div class="filepath">agents/chatbot_qa.py</div>
+
+    <p>Reads every chatbot conversation from the last 4 hours that has not yet been evaluated. Sends each one to Ollama along with the full knowledge base and asks it to find errors.</p>
+
+    <h3>Step-by-Step Logic</h3>
+    <pre>1. Compute window: now minus 4 hours
+2. Query prod MongoDB: conversations where createdAt >= window AND turnCount >= 2
+3. For each conversation:
+   a. Check qa_results.chatbot_qa — has this conversation_id been evaluated?
+      YES → skip it (deduplication)
+      NO  → continue
+   b. Load agents/prompts/chatbot_qa.md from disk (fresh every time)
+   c. Load all 8 KB files from knowledge_base/webbot/ (fresh every time)
+   d. Strip HTML tags from bot responses
+   e. Format as "User: ... \nBot: ..."
+   f. Send to Ollama → receive JSON result
+   g. Save result to qa_results.chatbot_qa
+   h. If FAIL → print alert
+4. Print: evaluated X conversations, skipped Y already done</pre>
+
+    <h3>Issue Types the LLM Checks For</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Issue Type</th><th>Severity</th><th>What It Means</th></tr></thead>
+        <tbody>
+          <tr><td>PRICE_ACCURACY</td><td><span class="sev-high">HIGH</span></td><td>Bot quoted a wrong price for any unit size</td></tr>
+          <tr><td>RERA_NUMBER</td><td><span class="sev-high">HIGH</span></td><td>Wrong or missing RERA registration number</td></tr>
+          <tr><td>INVENTED_FACT</td><td><span class="sev-high">HIGH</span></td><td>Bot stated something not in KB (e.g. rental offer, model flat for Loft)</td></tr>
+          <tr><td>GUARDRAIL_VIOLATION</td><td><span class="sev-high">HIGH</span></td><td>Bot made a legal guarantee or investment promise</td></tr>
+          <tr><td>MISSED_LEAD_CAPTURE</td><td><span class="sev-med">MEDIUM</span></td><td>3+ turns, clear purchase intent, but name/phone was never asked</td></tr>
+          <tr><td>TONE_ISSUE</td><td><span class="sev-med">MEDIUM</span></td><td>Unprofessional language for a premium real estate brand</td></tr>
+          <tr><td>INCOMPLETE_RESPONSE</td><td><span class="sev-med">MEDIUM</span></td><td>A direct question from the user was not answered</td></tr>
+          <tr><td>WRONG_PROJECT_RECOMMENDATION</td><td><span class="sev-med">MEDIUM</span></td><td>Recommended a project that doesn't fit the stated budget</td></tr>
+          <tr><td>LANGUAGE_MISMATCH</td><td><span class="sev-low">LOW</span></td><td>User wrote in Hindi/Telugu but bot replied only in English</td></tr>
+          <tr><td>MINOR_PHRASING</td><td><span class="sev-low">LOW</span></td><td>Minor awkwardness — information is correct</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>FAIL Condition</h3>
+    <div class="formula">Status = FAIL &nbsp; if: &nbsp; any HIGH issue exists
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; OR &nbsp; 3 or more MEDIUM issues exist
+Status = PASS &nbsp; otherwise</div>
+
+    <h3>Score Rubric (Ollama assigns this, 1–10)</h3>
+    <div class="score-cards">
+      <div class="score-card"><div class="num">10</div><div class="label">Perfect</div></div>
+      <div class="score-card"><div class="num">8–9</div><div class="label">Good / LOW issues only</div></div>
+      <div class="score-card"><div class="num">6–7</div><div class="label">1–2 MEDIUM issues</div></div>
+      <div class="score-card"><div class="num">3–5</div><div class="label">HIGH issues present</div></div>
+      <div class="score-card" style="border-color:#C0392B"><div class="num" style="color:#C0392B">1–2</div><div class="label">Invented facts / total failure</div></div>
+    </div>
+
+    <h3>Confidence Score (0.0 – 1.0)</h3>
+    <p>Ollama also returns how certain it is about its own assessment. This directly affects the health score calculation.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Confidence</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1.0</strong></td><td>Exact factual mismatch found (bot said 1.90 cr, KB says 1.94 cr). Certain.</td></tr>
+          <tr><td><strong>0.8</strong></td><td>Strong evidence, minor ambiguity</td></tr>
+          <tr><td><strong>0.6</strong></td><td>Likely issue, conversation short or context unclear</td></tr>
+          <tr><td><strong>0.4</strong></td><td>Possible issue, not confident</td></tr>
+          <tr><td><strong>0.2</strong></td><td>Very uncertain — flagging speculatively</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><em>Rule: if a conversation is only 1–2 turns long, confidence is capped at 0.5 regardless.</em></p>
+  </section>
+
+  <!-- S4 -->
+  <section class="section" id="s4">
+    <div class="section-title"><div class="section-num">4</div>Agent 2 — Voice QA (Anandita)</div>
+    <div class="filepath">agents/voice_qa.py</div>
+
+    <p>Reads every phone call transcript from the last 4 hours. Checks Anandita's behaviour against her knowledge base and voice-specific rules.</p>
+
+    <h3>Step-by-Step Logic</h3>
+    <pre>1. Compute window: now minus 4 hours
+2. Query prod: calls where started_at >= window AND transcript is not empty
+3. For each call:
+   a. Check qa_results.voice_qa — has this call_sid been evaluated?
+      YES → skip
+      NO  → continue
+   b. Load agents/prompts/voice_qa.md (fresh from disk)
+   c. Load 3 Anandita KB files: project_facts.md, system_prompt.md, qa_checklist.md
+   d. Format transcript:
+      speaker = "Anandita"     → "Anandita: ..."
+      speaker = phone number   → "Caller: ..."
+   e. Send to Ollama → receive JSON result
+   f. Save to qa_results.voice_qa</pre>
+
+    <h3>Voice-Specific Issue Types</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Issue Type</th><th>Severity</th><th>What It Means</th></tr></thead>
+        <tbody>
+          <tr><td>DECIMAL_NUMBER</td><td><span class="sev-high">HIGH</span></td><td>Said "one ninety-four crore" instead of "one point nine four crore"</td></tr>
+          <tr><td>PRICE_ACCURACY</td><td><span class="sev-high">HIGH</span></td><td>Quoted wrong price for any project or unit size</td></tr>
+          <tr><td>INVENTED_FACT</td><td><span class="sev-high">HIGH</span></td><td>Stated something not in the knowledge base</td></tr>
+          <tr><td>LANGUAGE_HANDLING</td><td><span class="sev-med">MEDIUM</span></td><td>Caller spoke Hindi/Telugu but Anandita stayed in English</td></tr>
+          <tr><td>MISSED_QUALIFICATION</td><td><span class="sev-med">MEDIUM</span></td><td>Long call without asking budget, timeline, or configuration</td></tr>
+          <tr><td>AI_PHRASE</td><td><span class="sev-med">MEDIUM</span></td><td>Said "As an AI language model..." — breaks the persona completely</td></tr>
+          <tr><td>INCOMPLETE_RESPONSE</td><td><span class="sev-low">LOW</span></td><td>A direct question was not answered</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Language Compliance (Separate Field)</h3>
+    <div class="formula">PASS:  Entire call in English
+       OR caller spoke Hindi/Telugu and Anandita switched correctly
+
+FAIL:  Caller clearly spoke Hindi or Telugu (multiple sentences)
+       but Anandita remained in English throughout</div>
+    <p><em>Stored as its own field: <code>language_compliance = "PASS" or "FAIL"</code>. Separate from the score.</em></p>
+  </section>
+
+  <!-- S5 -->
+  <section class="section" id="s5">
+    <div class="section-title"><div class="section-num">5</div>Agent 3 — Analytics Validator</div>
+    <div class="filepath">agents/analytics.py</div>
+
+    <p>Does not evaluate conversations. Validates whether the analytics scoring system — which assigns bands and fires Meta/Google conversion events — is actually producing the business outcomes you want. Runs 4 independent checks every cycle.</p>
+
+    <h3>Check 1: Band Conversion Rates</h3>
+    <p>Reads your business goals from <code>config/outcomes.json</code>. For each active outcome and each scoring band, checks whether the actual conversion rate matches your target.</p>
+    <pre>For each active outcome (e.g. "site_visit_booked"):
+  For each lead in scores_overall:
+    band      = lead.lifetime.highest_band_ever
+    converted = check outcome field (True / False)
+
+  For each band:
+    rate   = converted_count / total_count
+    target = your target % from outcomes.json
+    meta_events = count of events fired for this band
+
+    FLAG (HIGH severity) if:
+      meta_events > 0          ← money is being spent
+      AND rate &lt; target        ← conversions below target
+      AND total_count >= 3     ← enough data to judge</pre>
+
+    <h4>Outcome Field Mapping (Internal — users never touch this)</h4>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Outcome Name</th><th>MongoDB Field</th><th>Match Value</th></tr></thead>
+        <tbody>
+          <tr><td>site_visit_booked</td><td>milestones.has_visit_booked</td><td>True (boolean)</td></tr>
+          <tr><td>otp_verified</td><td>milestones.has_otp_verified</td><td>True (boolean)</td></tr>
+          <tr><td>affordability_confirmed</td><td>milestones.affordability_outcome</td><td>"YES" (string)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><em>Note: milestones.has_visit_confirmed was removed — this field is never populated in the ASBL system.</em></p>
+
+    <h3>Check 2: Multiplier Effectiveness</h3>
+    <p>Multipliers are score boosts triggered by specific user actions. This check verifies that each one actually correlates with better outcomes.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Multiplier</th><th>What Triggers It</th></tr></thead>
+        <tbody>
+          <tr><td><strong>M1</strong></td><td>Affordability calculator (EMI-based, salary input) determines lead CAN afford</td></tr>
+          <tr><td><strong>M2</strong></td><td>Lead stayed on site 30+ seconds after seeing they cannot afford it</td></tr>
+          <tr><td><strong>M3</strong></td><td>Lead typed their actual home address (high intent signal)</td></tr>
+          <tr><td><strong>M4</strong></td><td>Lead completed OTP verification — applies a 1.3× score multiplier</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <pre>For each multiplier:
+  Group A = leads who completed this multiplier
+  Group B = leads who did NOT complete it
+
+  rate_A = Group A leads who booked a visit / count(Group A)
+  rate_B = Group B leads who booked a visit / count(Group B)
+
+  effective = (rate_A > rate_B)
+
+  FLAG (MEDIUM severity) if:
+    NOT effective
+    AND sample_size >= 5</pre>
+
+    <h3>Check 3: Meta Signal Accuracy</h3>
+    <p>Meta/Google conversion events fire when a lead crosses a band threshold — each firing costs money. This checks what fraction actually convert to a site visit.</p>
+    <pre>For each meta_conversion_event:
+  Find the lead (via lead_id, or session_id → scores_session_wise)
+  Check: has this lead booked a site visit?
+    YES → led_to_visit += 1
+    NO  → wasted += 1
+
+accuracy = led_to_visit / total_events
+
+FLAG (HIGH severity) if accuracy &lt; 20% AND total_events >= 10</pre>
+    <div class="notice orange">
+      <span class="notice-icon">📊</span>
+      <span><strong>Current finding:</strong> 0.38% accuracy — 52 out of 13,653 Meta events led to a confirmed site visit. ₹7,85,500 in Meta event value is being fired per Band5_Hot lead, but only ~1 in 263 converts.</span>
+    </div>
+
+    <h3>Check 4: Funnel Gaps</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Gap</th><th>Query</th><th>Severity</th></tr></thead>
+        <tbody>
+          <tr><td>leads_with_no_session</td><td>scores_overall where lifetime.total_sessions == 0</td><td><span class="sev-low">LOW</span></td></tr>
+          <tr><td>affordability_yes_no_visit</td><td>scores_overall where affordability = YES AND has_visit_booked = False</td><td><span class="sev-med">MEDIUM</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- S6 -->
+  <section class="section" id="s6">
+    <div class="section-title"><div class="section-num">6</div>Agent 4 — Feedback Agent (The Manager)</div>
+    <div class="filepath">agents/feedback.py</div>
+
+    <p>The Feedback Agent is the manager. It reads all outputs from the QA agents, computes health scores, and asks the LLM to identify every genuine problem — including patterns that span multiple agents. <strong>It does NOT generate fixes.</strong></p>
+
+    <div class="notice blue">
+      <span class="notice-icon">🔑</span>
+      <span><strong>Key design principle:</strong> The LLM sees everything and decides on its own what is wrong. There are zero rule-based checks. No hardcoded thresholds for problem detection.</span>
+    </div>
+
+    <h3>Phase 1: Health Score Formula</h3>
+    <h4>Chatbot & Voice Formula</h4>
+    <div class="formula">For each result in qa_results.chatbot_qa (last 4 hours):
+
+  base_score  = Ollama's raw score (1 to 10)
+  confidence  = Ollama's confidence (0.0 to 1.0, default 0.5 if missing)
+
+  penalty = 0
+  for each issue:
+    severity_weight = { HIGH: 2.0,  MEDIUM: 0.8,  LOW: 0.2 }
+    penalty += severity_weight × confidence
+
+  adjusted_score = clamp( base_score − penalty,  min=0,  max=10 )
+
+health_score = average of all adjusted scores
+fail_rate    = count(FAIL results) / total results</div>
+
+    <h4>Why Confidence Matters</h4>
+    <pre>Example A: score=7, confidence=0.95, issues=[HIGH]
+  penalty = 2.0 × 0.95 = 1.90  →  adjusted = 5.10  (very certain — hurts a lot)
+
+Example B: score=7, confidence=0.40, issues=[HIGH]
+  penalty = 2.0 × 0.40 = 0.80  →  adjusted = 6.20  (uncertain — hurts less)
+
+A HIGH issue the LLM is unsure about should not tank the score the same
+way a confirmed HIGH issue does.</pre>
+
+    <h4>Analytics Formula</h4>
+    <div class="formula">high_flags   = count of flags with severity = HIGH
+medium_flags = count of flags with severity = MEDIUM
+
+analytics_score = max(0,  10 − (high_flags × 2.5) − (medium_flags × 1.0))</div>
+
+    <h4>Health Score Scale</h4>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Score Range</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><strong>8.0 – 10.0</strong></td><td>✅ Healthy — system performing well</td></tr>
+          <tr><td><strong>6.5 – 7.9</strong></td><td>🟡 Acceptable — minor issues present</td></tr>
+          <tr><td><strong>5.0 – 6.4</strong></td><td>🟠 Concerning — noticeable quality problems</td></tr>
+          <tr><td><strong>3.0 – 4.9</strong></td><td>🔴 Bad — significant failures this cycle</td></tr>
+          <tr><td><strong>0.0 – 2.9</strong></td><td>🚨 Critical — major breakdown, immediate action needed</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>Trend Detection</h4>
+    <div class="formula">Look at the last 3 health scores in history:
+  All three decreasing (each &lt; previous) → DECLINING
+  All three increasing (each > previous)  → IMPROVING
+  Otherwise                               → STABLE</div>
+
+    <h3>Phase 2: Pure LLM Problem Detection</h3>
+    <p>All data from this cycle is assembled and sent to Ollama. The LLM receives the full feedback_reasoning.md prompt (12KB) plus all QA results and analytics data.</p>
+
+    <h4>Cross-Agent Patterns the LLM Is Taught</h4>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Pattern</th><th>Condition</th><th>What It Means</th></tr></thead>
+        <tbody>
+          <tr><td>Analytics miscalibrated</td><td>Chatbot ≥6.5 AND voice ≥6.5, but outcomes below target</td><td>Both bots are fine. Scoring promotes wrong leads.</td></tr>
+          <tr><td>Shared KB wrong</td><td>Same HIGH issue in BOTH chatbot and voice</td><td>KB data is outdated — not a bot bug.</td></tr>
+          <tr><td>Band thresholds too low</td><td>Meta accuracy &lt;5% AND QA healthy</td><td>Leads reach high bands without real intent.</td></tr>
+          <tr><td>Doubly broken</td><td>Meta accuracy &lt;5% AND QA also failing</td><td>Two separate root causes.</td></tr>
+          <tr><td>Voice-specific bug</td><td>Chatbot score > voice score by 3+ points</td><td>Anandita-specific issue, not shared KB.</td></tr>
+          <tr><td>Chatbot-specific bug</td><td>Voice score > chatbot score by 3+ points</td><td>Chatbot-specific, not shared KB.</td></tr>
+          <tr><td>Affordability ops gap</td><td>affordability_yes_no_visit count > 10</td><td>Sales ops failing to follow up, not AI.</td></tr>
+          <tr><td>Multiplier miscalibrated</td><td>Multiplier ineffective AND QA healthy</td><td>Scoring weight is too high for this signal.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>Problem Schema</h4>
+    <pre>{
+  "id":               "P001",
+  "title":            "Short description of the problem",
+  "urgency":          "HIGH",          // HIGH / MEDIUM / LOW
+  "type":             "SYSTEMATIC_BUG",
+  "components":       ["voice"],
+  "description":      "Plain English explanation with numbers",
+  "evidence":         ["data point 1", "data point 2"],
+  "what_is_wrong":    "One line — the specific broken thing",
+  "what_is_not_wrong":"One line — what should NOT be blamed"
+}</pre>
+  </section>
+
+  <!-- S7 -->
+  <section class="section" id="s7">
+    <div class="section-title"><div class="section-num">7</div>Agent 5 — Recommendation Agent (The Engineer)</div>
+    <div class="filepath">agents/recommendation.py</div>
+
+    <p>Receives the problem list directly from the Feedback Agent and produces one specific, actionable fix for each problem. <strong>Does NOT hunt for new problems.</strong></p>
+
+    <h3>Fix Generation Logic</h3>
+    <pre>For each problem (sorted: HIGH first, then MEDIUM, then LOW):
+
+  Step 1: Check KNOWN_FIXES dictionary (no LLM needed — faster)
+    DECIMAL_NUMBER     → template fix
+    PRICE_ACCURACY     → template fix
+    RERA_NUMBER        → template fix
+    LANGUAGE_HANDLING  → template fix
+
+  Step 2: If no template match → call Ollama with:
+    [recommendation.md — 13KB: ASBL facts + file locations + fix patterns]
+    [the problem: id, title, components, evidence, what_is_wrong]
+    [historical baseline: first score, best score, current score, dates]
+
+  Step 3: Return fix object</pre>
+
+    <h3>How Historical Baseline Is Used</h3>
+    <div class="formula">For each component (chatbot, voice, analytics):
+  Pull last 30 days of health_scores
+
+  first_score = score on very first run + date
+  best_score  = highest score ever + date
+  current     = latest score + date
+
+LLM uses this to say:
+  "Voice score was 7.5 on 2026-05-09 and dropped to 2.5 by 2026-05-12.
+   Something likely changed around 2026-05-10."</div>
+
+    <h3>Fix Object Schema</h3>
+    <pre>{
+  "problem_id":       "P001",
+  "problem_title":    "Anandita decimal format broken",
+  "urgency":          "HIGH",
+  "root_cause":       "One sentence including when it started",
+  "fix":              "Exactly what to do — specific enough to act on today",
+  "where":            "Exact file path, or 'scoring model', or 'CRM/ops workflow'",
+  "change_type":      "kb_file_edit",
+  "expected_outcome": "What improves, by how much, how quickly"
+}</pre>
+
+    <h3>Change Types</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>change_type</th><th>Meaning</th><th>Takes Effect</th></tr></thead>
+        <tbody>
+          <tr><td><strong>kb_file_edit</strong></td><td>Edit a .md file in knowledge_base/</td><td>Next 4-hour run, automatically</td></tr>
+          <tr><td><strong>config_edit</strong></td><td>Edit a .json file in config/</td><td>Next 4-hour run, automatically</td></tr>
+          <tr><td><strong>scoring_model</strong></td><td>Change in the analytics scoring system</td><td>Needs deployment — 24–48 hours</td></tr>
+          <tr><td><strong>ops_process</strong></td><td>Human or CRM action required. No code.</td><td>When human acts on it</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- S8 -->
+  <section class="section" id="s8">
+    <div class="section-title"><div class="section-num">8</div>The Runner — How Everything Connects</div>
+    <div class="filepath">runner.py</div>
+
+    <pre>def run_once():
+    chatbot_qa.batch(hours=4)       # Step 1
+    voice_qa.batch(hours=4)         # Step 2
+    analytics.run()                 # Step 3
+    problems = feedback.aggregate() # Step 4 — returns Problem objects
+    recommendation.run(problems)    # Step 5 — receives list directly
+
+# runner.py once  →  run one full cycle right now
+# runner.py       →  run every 4 hours indefinitely</pre>
+
+    <div class="notice blue">
+      <span class="notice-icon">💡</span>
+      <span>The problems list is passed directly in memory from Feedback → Recommendation. The Recommendation Agent does not re-fetch anything from the database.</span>
+    </div>
+  </section>
+
+  <!-- S9 -->
+  <section class="section" id="s9">
+    <div class="section-title"><div class="section-num">9</div>Business Outcomes Config</div>
+    <div class="filepath">config/outcomes.json</div>
+
+    <p>You define your business goals in plain English. Zero code changes. The analytics agent reads this file every run and adjusts its checks automatically.</p>
+
+    <h3>Current Active Outcomes</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Outcome</th><th>What It Measures</th><th>Overall Target</th><th>Band5_Hot Target</th></tr></thead>
+        <tbody>
+          <tr><td>site_visit_booked</td><td>Did the lead book a physical site visit?</td><td>30%</td><td>60%</td></tr>
+          <tr><td>otp_verified</td><td>Did the lead complete OTP phone verification?</td><td>15%</td><td>60%</td></tr>
+          <tr><td>affordability_confirmed</td><td>Did the affordability calculator say YES?</td><td>10%</td><td>50%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Config Structure</h3>
+    <pre>{
+  "outcomes": [
+    {
+      "name":   "site_visit_booked",
+      "label":  "Site Visit Booked",
+      "goal":   "I want at least 30% of all leads to book a site visit...",
+      "active": true,
+      "targets": {
+        "overall_pct": 30,
+        "by_band_pct": {
+          "Band3_Intent": 10, "Band4_Qualified": 30, "Band5_Hot": 60
+        }
+      }
+    }
+  ]
+}</pre>
+    <ul>
+      <li><strong>Add outcome:</strong> add a block, set <code>active: true</code>, write targets. Zero code changes.</li>
+      <li><strong>Pause outcome:</strong> set <code>"active": false</code>.</li>
+    </ul>
+  </section>
+
+  <!-- S10 -->
+  <section class="section" id="s10">
+    <div class="section-title"><div class="section-num">10</div>The Prompt File System</div>
+
+    <p>Every agent that calls the LLM has a dedicated prompt file in <code>agents/prompts/</code>. Loaded fresh from disk every run. Edit the file → behaviour changes next cycle. No deployment needed.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Size</th><th>What It Controls</th></tr></thead>
+        <tbody>
+          <tr><td>chatbot_qa.md</td><td>~10KB</td><td>Issue types, severity rules, score rubric, confidence rules, output schema</td></tr>
+          <tr><td>voice_qa.md</td><td>~11KB</td><td>Same as chatbot + decimal format rules, language compliance, voice guardrails</td></tr>
+          <tr><td>feedback_reasoning.md</td><td>~12KB</td><td>Health score interpretation, cross-agent patterns, urgency classification, false positive avoidance</td></tr>
+          <tr><td>recommendation.md</td><td>~13KB</td><td>All ASBL file locations, project facts, band/multiplier context, known fix templates</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>How Prompts Are Assembled</h3>
+    <div class="formula">[Full .md prompt file — static instructions loaded from disk]
+              +
+[Dynamic data injected at runtime — conversation / analytics / problem details]
+              =
+Full prompt sent to Ollama</div>
+  </section>
+
+  <!-- S11 -->
+  <section class="section" id="s11">
+    <div class="section-title"><div class="section-num">11</div>Results Database — Full Schema</div>
+    <p><strong>Database:</strong> qa_results &nbsp;|&nbsp; <strong>Env var:</strong> MONGO_URI_RESULTS &nbsp;|&nbsp; Separate cluster, never prod.</p>
+
+    <h3>Collection: chatbot_qa</h3>
+    <p>One document per chatbot conversation evaluated.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Definition</th></tr></thead>
+        <tbody>
+          <tr><td>_id</td><td>ObjectId</td><td>MongoDB auto-generated unique ID</td></tr>
+          <tr><td>conversation_id</td><td>String</td><td>e.g. "c-1778876809751-13ps22ku". Used for deduplication.</td></tr>
+          <tr><td>status</td><td>String</td><td>"PASS", "FAIL", or "SKIPPED"</td></tr>
+          <tr><td>score</td><td>Integer</td><td>1–10. Ollama's raw quality score before penalty.</td></tr>
+          <tr><td>confidence</td><td>Float</td><td>0.0–1.0. How certain Ollama is. Default 0.5 if omitted.</td></tr>
+          <tr><td>turn_count</td><td>Integer</td><td>Number of user-bot exchanges in the conversation.</td></tr>
+          <tr><td>issues</td><td>Array</td><td>List of issue objects: { type, severity (HIGH/MEDIUM/LOW), detail }</td></tr>
+          <tr><td>summary</td><td>String</td><td>One sentence evaluation summary from Ollama.</td></tr>
+          <tr><td>evaluated_at</td><td>String</td><td>ISO timestamp of when evaluation ran.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Collection: voice_qa</h3>
+    <p>One document per phone call evaluated.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Definition</th></tr></thead>
+        <tbody>
+          <tr><td>_id</td><td>ObjectId</td><td>Auto-generated</td></tr>
+          <tr><td>call_sid</td><td>String</td><td>Unique call ID. Used for deduplication.</td></tr>
+          <tr><td>phone_number</td><td>String</td><td>Caller's phone number</td></tr>
+          <tr><td>call_direction</td><td>String</td><td>"inbound" or "outbound"</td></tr>
+          <tr><td>language_used</td><td>String</td><td>Language detected on the call</td></tr>
+          <tr><td>project</td><td>String</td><td>Which ASBL project was discussed</td></tr>
+          <tr><td>status</td><td>String</td><td>"PASS", "FAIL", or "SKIPPED"</td></tr>
+          <tr><td>score</td><td>Integer</td><td>1–10</td></tr>
+          <tr><td>confidence</td><td>Float</td><td>0.0–1.0</td></tr>
+          <tr><td>language_compliance</td><td>String</td><td>"PASS" or "FAIL" — evaluated independently from score</td></tr>
+          <tr><td>issues</td><td>Array</td><td>Same structure as chatbot_qa</td></tr>
+          <tr><td>summary</td><td>String</td><td>One sentence summary</td></tr>
+          <tr><td>evaluated_at</td><td>String</td><td>ISO timestamp</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Collection: analytics_runs</h3>
+    <p>One document per analytics check cycle.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Definition</th></tr></thead>
+        <tbody>
+          <tr><td>_id</td><td>ObjectId</td><td>Auto-generated</td></tr>
+          <tr><td>run_at</td><td>String</td><td>ISO timestamp of when this analytics run executed</td></tr>
+          <tr><td>outcomes_checked</td><td>Array</td><td>Names of active outcomes checked e.g. ["site_visit_booked"]</td></tr>
+          <tr><td>band_conversion_rates</td><td>Object</td><td>Nested: outcome_name → band_name → { total_leads, converted, rate, target_pct, meta_events_fired, flag }</td></tr>
+          <tr><td>multiplier_effectiveness</td><td>Object</td><td>Per multiplier: { with_rate, without_rate, effective, sample_size }</td></tr>
+          <tr><td>meta_signal_accuracy</td><td>Object</td><td>{ total_events_fired, events_led_to_visit, wasted_signal_count, accuracy_rate }</td></tr>
+          <tr><td>funnel_gaps</td><td>Array</td><td>List of gap objects: { type, count, severity, detail }</td></tr>
+          <tr><td>flags</td><td>Array</td><td>All issues found: { type, outcome, severity, detail }</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Collection: health_scores</h3>
+    <p>One document per component per run. The historical record used for trend detection.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Definition</th></tr></thead>
+        <tbody>
+          <tr><td>_id</td><td>ObjectId</td><td>Auto-generated</td></tr>
+          <tr><td>recorded_at</td><td>String</td><td>ISO timestamp</td></tr>
+          <tr><td>component</td><td>String</td><td>"chatbot", "voice", or "analytics"</td></tr>
+          <tr><td>score</td><td>Float</td><td>Severity-weighted health score 0.0–10.0</td></tr>
+          <tr><td>fail_rate</td><td>Float</td><td>Fraction of evaluations that failed (0.0–1.0)</td></tr>
+          <tr><td>details</td><td>Object</td><td>Chatbot/voice: { total_evaluated, fails }. Analytics: { high_flags, medium_flags, total_flags }</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Collection: recommendations</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Definition</th></tr></thead>
+        <tbody>
+          <tr><td>_id</td><td>ObjectId</td><td>Auto-generated</td></tr>
+          <tr><td>generated_at</td><td>String</td><td>ISO timestamp</td></tr>
+          <tr><td>negative_signals</td><td>Array</td><td>Titles of all problems found this cycle</td></tr>
+          <tr><td>root_cause</td><td>String</td><td>Top root cause sentence from highest urgency fix</td></tr>
+          <tr><td>fixes</td><td>Array</td><td>{ rank, problem_id, component, problem, fix, expected_outcome }</td></tr>
+          <tr><td>priority</td><td>String</td><td>"HIGH", "MEDIUM", or "LOW"</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Collection: feedback</h3>
+    <p>Human-submitted feedback — separate from automated checks.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Definition</th></tr></thead>
+        <tbody>
+          <tr><td>text</td><td>String</td><td>Raw feedback text as submitted</td></tr>
+          <tr><td>submitted_by</td><td>String</td><td>Name of the person</td></tr>
+          <tr><td>submitted_at</td><td>String</td><td>ISO timestamp</td></tr>
+          <tr><td>product</td><td>String</td><td>"chatbot", "voice_agent", "analytics", or "general"</td></tr>
+          <tr><td>type</td><td>String</td><td>"bug", "suggestion", "complaint", or "praise"</td></tr>
+          <tr><td>priority</td><td>String</td><td>"high", "medium", or "low"</td></tr>
+          <tr><td>tag</td><td>String</td><td>PRICE_ISSUE / RERA_NUMBER / TONE / LANGUAGE / LEAD_CAPTURE / ANALYTICS / META_SIGNAL / PERFORMANCE / OTHER</td></tr>
+          <tr><td>actionable</td><td>Boolean</td><td>Whether this can be acted on</td></tr>
+          <tr><td>summary</td><td>String</td><td>One-sentence LLM-generated summary</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- S12 -->
+  <section class="section" id="s12">
+    <div class="section-title"><div class="section-num">12</div>Production Database — Read-Only Reference</div>
+    <div class="notice blue"><span class="notice-icon">🔒</span><span>These collections are read by the QA agents but <strong>never written to</strong>. Documented here for reference only.</span></div>
+
+    <h3>asbl_loft.conversations (Chatbot)</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Field</th><th>Definition</th></tr></thead>
+      <tbody>
+        <tr><td>conversationId</td><td>Unique ID e.g. "c-1778876809751-13ps22ku"</td></tr>
+        <tr><td>createdAt</td><td>Timestamp — may be string or datetime object</td></tr>
+        <tr><td>leadId</td><td>May be null — anonymous visitors are normal and expected</td></tr>
+        <tr><td>turnCount</td><td>Number of exchanges. Only conversations with ≥2 are evaluated.</td></tr>
+        <tr><td>conversationDepth</td><td>Array of turns: { turnNumber, userText, botText (HTML — stripped by agent), botLatency }</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>ASBLVoiceBot.call_transcripts (Voice)</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Field</th><th>Definition</th></tr></thead>
+      <tbody>
+        <tr><td>call_sid</td><td>Unique call identifier</td></tr>
+        <tr><td>phone_number</td><td>Caller's phone number</td></tr>
+        <tr><td>call_direction</td><td>"inbound" or "outbound"</td></tr>
+        <tr><td>started_at</td><td>Timestamp when call began</td></tr>
+        <tr><td>transcript</td><td>Array: { speaker ("Anandita" or phone number), text, ts }</td></tr>
+        <tr><td>language_used</td><td>Language detected</td></tr>
+        <tr><td>project</td><td>Which project was discussed</td></tr>
+        <tr><td>site_visit_agreed</td><td>Boolean — did caller agree to visit?</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>analytics_db.scores_overall (~30 docs)</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Field / Path</th><th>Definition</th></tr></thead>
+      <tbody>
+        <tr><td>lead_id</td><td>Unique lead identifier</td></tr>
+        <tr><td>current_band</td><td>"Band1_Spark" through "Band5_Hot"</td></tr>
+        <tr><td>lifetime.highest_band_ever</td><td>Highest band ever reached — used for band conversion checks</td></tr>
+        <tr><td>lifetime.total_sessions</td><td>Number of website sessions</td></tr>
+        <tr><td>milestones.has_otp_verified</td><td>Boolean — used for otp_verified outcome</td></tr>
+        <tr><td>milestones.has_visit_booked</td><td>Boolean — used for site_visit_booked outcome</td></tr>
+        <tr><td>milestones.affordability_outcome</td><td>"YES", "NO", or null — used for affordability_confirmed outcome</td></tr>
+        <tr><td>milestones.has_visit_confirmed</td><td style="color:#C0392B">NEVER POPULATED — removed from all checks</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- S13 -->
+  <section class="section" id="s13">
+    <div class="section-title"><div class="section-num">13</div>Band Scoring System</div>
+    <p>External to this QA agent — runs in ASBL's analytics platform. The QA agent reads and validates its outputs only.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Band</th><th>Approx. Score Range</th><th>Meta Event Value (₹)</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Band1_Spark</td><td>8–20</td><td>500</td><td>Visitor arrived, minimal engagement</td></tr>
+          <tr><td>Band2_Engaged</td><td>40–53</td><td>5,500</td><td>Showing interest, exploring content</td></tr>
+          <tr><td>Band3_Intent</td><td>60–98</td><td>35,500</td><td>Clear purchase intent signals</td></tr>
+          <tr><td>Band4_Qualified</td><td>130–191</td><td>1,85,500</td><td>Strong qualification signals</td></tr>
+          <tr><td><strong>Band5_Hot</strong></td><td>230+</td><td><strong>7,85,500</strong></td><td>Highest intent, ready to act</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- S14 -->
+  <section class="section" id="s14">
+    <div class="section-title"><div class="section-num">14</div>The LLM Wrapper</div>
+    <div class="filepath">llm.py</div>
+    <pre>def ask(prompt) → str:
+  Send prompt to http://localhost:11434
+  Return raw text response
+
+def _extract_json(text) → dict:
+  1. Strip markdown code fences (```json ... ```)
+  2. Brace-matching algorithm to find complete { ... } block
+  3. Parse and return
+  Raise ValueError if no valid JSON found
+
+def ask_json(prompt, retries=2) → dict:
+  Call ask(), then _extract_json()
+  Retry up to 2 times on parse failure
+  Raise on final failure
+
+Ollama parameters:
+  model: llama3.1:8b  |  stream: false
+  temperature: 0.1    |  num_predict: 1500</pre>
+  </section>
+
+  <!-- S15 -->
+  <section class="section" id="s15">
+    <div class="section-title"><div class="section-num">15</div>File & Folder Structure</div>
+    <pre>asbl-qa-agent/
+├── .env                          MONGO_URI_PROD, MONGO_URI_RESULTS, TEAMS_WEBHOOK_URL
+├── llm.py                        Ollama wrapper
+├── db.py                         Results MongoDB interface
+├── notifier.py                   Console logging + Teams webhook
+├── runner.py                     4-hour batch runner
+│
+├── config/
+│   └── outcomes.json             Business goals in plain English
+│
+├── agents/
+│   ├── chatbot_qa.py
+│   ├── voice_qa.py
+│   ├── analytics.py
+│   ├── feedback.py
+│   └── recommendation.py
+│
+├── agents/prompts/
+│   ├── chatbot_qa.md             ~10KB evaluator instructions
+│   ├── voice_qa.md               ~11KB voice-specific instructions
+│   ├── feedback_reasoning.md     ~12KB manager reasoning rules
+│   └── recommendation.md         ~13KB fix generation + ASBL facts
+│
+└── knowledge_base/
+    ├── webbot/
+    │   ├── 00_qa_checklist.md
+    │   ├── 01_system_prompt.md
+    │   ├── 02_kb_project_loft.md
+    │   └── ... (8 files total)
+    └── anandita/
+        ├── project_facts.md
+        ├── system_prompt.md
+        └── qa_checklist.md</pre>
+  </section>
+
+  <!-- S16 -->
+  <section class="section" id="s16">
+    <div class="section-title"><div class="section-num">16</div>What You Can Change Without Code</div>
+    <p>Edit a file → change takes effect on the next 4-hour run. No Python changes, no deployments, no restarts.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>What to Change</th><th>File to Edit</th><th>Takes Effect</th></tr></thead>
+        <tbody>
+          <tr><td>Add a new business goal</td><td>config/outcomes.json</td><td>Next run</td></tr>
+          <tr><td>Change target percentages</td><td>config/outcomes.json</td><td>Next run</td></tr>
+          <tr><td>Pause a goal</td><td>config/outcomes.json — set active: false</td><td>Next run</td></tr>
+          <tr><td>Change what chatbot is checked for</td><td>agents/prompts/chatbot_qa.md</td><td>Next run</td></tr>
+          <tr><td>Change how calls are evaluated</td><td>agents/prompts/voice_qa.md</td><td>Next run</td></tr>
+          <tr><td>Add a cross-agent pattern</td><td>agents/prompts/feedback_reasoning.md</td><td>Next run</td></tr>
+          <tr><td>Add a known fix template</td><td>agents/prompts/recommendation.md</td><td>Next run</td></tr>
+          <tr><td>Update project prices</td><td>knowledge_base/anandita/project_facts.md AND knowledge_base/webbot/02_kb_project_loft.md</td><td>Next run</td></tr>
+          <tr><td>Update RERA numbers</td><td>Same two files above</td><td>Next run</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- S17 -->
+  <section class="section" id="s17">
+    <div class="section-title"><div class="section-num">17</div>How to Run the System</div>
+    <h3>Prerequisites</h3>
+    <ul>
+      <li>Ollama app must be open (check Mac menu bar). Model llama3.1:8b must be pulled.</li>
+      <li>.env file must contain MONGO_URI_PROD and MONGO_URI_RESULTS.</li>
+    </ul>
+    <pre># Install dependencies (one time)
+pip3 install pymongo python-dotenv requests --break-system-packages
+
+# Run one full cycle now (for testing)
+cd /Users/aanirudhmehra/Desktop/asbl-qa-agent
+python3 runner.py once
+
+# Run every 4 hours (production)
+python3 runner.py
+
+# Individual agents
+python3 agents/chatbot_qa.py           # last 4 hours of conversations
+python3 agents/voice_qa.py             # last 4 hours of calls
+python3 agents/analytics.py            # analytics checks
+python3 agents/feedback.py aggregate   # health scores + problems
+python3 agents/recommendation.py       # generates fixes
+
+# Human feedback
+python3 agents/feedback.py submit "Bot gave wrong Spectra price" "Anirudh"
+python3 agents/feedback.py list 20</pre>
+  </section>
+
+  <!-- S18 -->
+  <section class="section" id="s18">
+    <div class="section-title"><div class="section-num">18</div>ASBL Project Facts — Ground Truth</div>
+    <p>Authoritative values used by the Recommendation Agent when fixing KB errors. If the KB disagrees with this table, this table is correct.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Project</th><th>Location</th><th>Sizes & Prices</th><th>Handover</th><th>RERA</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>ASBL Loft</strong><br><small>3BHK only</small></td>
+            <td>Financial District</td>
+            <td>1695 sqft = ₹1.94 cr + 5% GST<br>1870 sqft = ₹2.15 cr + 5% GST<br>Booking: ₹10 lakhs | Plan: 50:50<br><em style="color:#C0392B">NO rental offer. NO model flat.</em></td>
+            <td>Dec 2026</td>
+            <td>P02400006761</td>
+          </tr>
+          <tr>
+            <td><strong>ASBL Spectra</strong><br><small>3BHK only</small></td>
+            <td>Financial District</td>
+            <td>1980 sqft = ₹1.95 cr + 5% GST<br>2220 sqft = ₹2.15 cr + 5% GST<br>Model flat: Available</td>
+            <td>Ready NOW</td>
+            <td>P02400003071</td>
+          </tr>
+          <tr>
+            <td><strong>ASBL Broadway</strong><br><small>3BHK only</small></td>
+            <td>Financial District</td>
+            <td>₹9,899/sqft ONLY<br><em>Never quote total price</em></td>
+            <td>Dec 2029</td>
+            <td>P02400009684</td>
+          </tr>
+          <tr>
+            <td><strong>ASBL Landmark</strong><br><small>3BHK & 3.5BHK<br>4BHK SOLD OUT</small></td>
+            <td>Kukatpally</td>
+            <td>₹8,799/sqft ONLY<br><em>Never quote total price</em></td>
+            <td>Dec 2028</td>
+            <td>P02200008770</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="notice blue"><span class="notice-icon">💡</span><span><strong>GST: 5% on all projects. Always disclosed upfront.</strong></span></div>
+  </section>
+
+  <!-- S19 -->
+  <section class="section" id="s19">
+    <div class="section-title"><div class="section-num">19</div>Pending Items</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Feature</th><th>Status</th><th>What Is Needed</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Security Agent</td><td>Not started</td><td>CodeAnt account + Bitbucket API token from Anirudh</td></tr>
+          <tr><td>2</td><td>Teams Webhook</td><td>Wired but not delivering</td><td>Power Automate flow returns 202 but message doesn't appear in Teams channel</td></tr>
+          <tr><td>3</td><td>Meta Agent</td><td>Deliberately deferred</td><td>Planned for next feature cycle</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<script>
+// Highlight active TOC item on scroll
+const sections = document.querySelectorAll('.section');
+const tocItems = document.querySelectorAll('.toc-item');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      tocItems.forEach(item => item.classList.remove('active'));
+      const id = entry.target.id;
+      const active = document.querySelector(`.toc-item[href="#${id}"]`);
+      if (active) {
+        active.classList.add('active');
+        active.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+{
+  "_how_to_use": [
+    "Write your goals in plain English under 'goal'.",
+    "Set targets as percentages (30 means 30%).",
+    "by_band targets are optional — only add bands you care about.",
+    "Set active to false to pause a goal without deleting it.",
+    "Do NOT edit the 'name' field in outcomes — it maps to internal field lookups in code.",
+    "You can add new outcomes — allowed names are listed in _allowed_names.",
+    "",
+    "PRIMARY KPIs — these are your top-level business goals.",
+    "The orchestrator reads these on every run and reasons all findings against them.",
+    "You can change the text here any time — no code changes needed.",
+    "Add as many KPIs as you want. Set active to false to pause one.",
+    "The 'how_we_measure' field explains how the system approximates this KPI from available data.",
+    "The 'target' field is optional plain English — used in reports, not in threshold checks."
+  ],
+
+  "primary_kpis": [
+    {
+      "name": "visitor_to_lead_ratio",
+      "label": "Visitor → Lead Ratio",
+      "goal": "Increase the % of website visitors who enter the lead pipeline. I want to move from roughly 15% to 25% over the next quarter.",
+      "target": "25% of unique sessions should result in a Band1 or higher lead score",
+      "how_we_measure": "leads entering Band1 or higher / total unique website sessions from scores_overall vs session tracking",
+      "active": true
+    },
+    {
+      "name": "lead_to_site_visit_ratio",
+      "label": "Lead → Site Visit Ratio",
+      "goal": "Of all leads in the pipeline, I want 30% to book a site visit. Right now I think we are below 15%.",
+      "target": "30% of all scored leads should have has_visit_booked = true",
+      "how_we_measure": "leads with has_visit_booked = true / total leads in scores_overall",
+      "active": true
+    },
+    {
+      "name": "meta_spend_efficiency",
+      "label": "Meta Ad Spend Efficiency",
+      "goal": "Every Meta conversion event we fire costs us money. I want at least 20% of Meta events to lead to an actual site visit so we are not wasting ad budget on low-intent leads.",
+      "target": "20% of meta_conversion_events should eventually result in a site visit",
+      "how_we_measure": "events in meta_conversion_events where lead later has has_visit_booked = true / total events",
+      "active": true
+    }
+  ],
+
+  "_allowed_names": [
+    "site_visit_booked",
+    "otp_verified",
+    "affordability_confirmed"
+  ],
+
+  "outcomes": [
+    {
+      "name": "site_visit_booked",
+      "label": "Site Visit Booked",
+      "goal": "I want at least 30% of all leads to book a site visit. Band5_Hot leads should be at 60%.",
+      "active": true,
+      "targets": {
+        "overall_pct": 30,
+        "by_band_pct": {
+          "Band2_Engaged":   5,
+          "Band3_Intent":    10,
+          "Band4_Qualified": 30,
+          "Band5_Hot":       60
+        }
+      }
+    },
+    {
+      "name": "otp_verified",
+      "label": "OTP Verified",
+      "goal": "I want at least 60% of Band5_Hot leads to complete OTP verification — it is a strong intent signal.",
+      "active": true,
+      "targets": {
+        "overall_pct": 15,
+        "by_band_pct": {
+          "Band2_Engaged":   15,
+          "Band3_Intent":    25,
+          "Band4_Qualified": 40,
+          "Band5_Hot":       60
+        }
+      }
+    },
+    {
+      "name": "affordability_confirmed",
+      "label": "Affordability Confirmed",
+      "goal": "I want at least 35% of Band4_Qualified leads to have confirmed they can afford the property.",
+      "active": true,
+      "targets": {
+        "overall_pct": 10,
+        "by_band_pct": {
+          "Band2_Engaged":   10,
+          "Band3_Intent":    20,
+          "Band4_Qualified": 35,
+          "Band5_Hot":       50
+        }
+      }
+    }
+  ]
+}
