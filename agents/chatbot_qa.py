@@ -73,14 +73,22 @@ def get_identity_fields(client: pymongo.MongoClient, conversation: dict) -> dict
     try:
         db = client["asbl_loft"]
 
-        # visitor_id — conversation.visitorId (ObjectId) → visitors.visitorId (string)
+        # visitor_id — conversation.visitorId is usually a plain string like "v-xxx"
+        # but older docs may store it as an ObjectId.
+        # Ephemeral IDs ("v-ephemeral-*") have no visitors record — skip them.
         raw_visitor = conversation.get("visitorId")
         if raw_visitor:
-            visitor_doc = db["visitors"].find_one({"_id": raw_visitor}, {"visitorId": 1, "phoneE164": 1})
-            if visitor_doc:
-                result["visitor_id"] = visitor_doc.get("visitorId")
-                if visitor_doc.get("phoneE164"):
-                    result["phone_number"] = visitor_doc["phoneE164"]
+            is_ephemeral = isinstance(raw_visitor, str) and raw_visitor.startswith("v-ephemeral")
+            if not is_ephemeral:
+                if isinstance(raw_visitor, str):
+                    visitor_doc = db["visitors"].find_one({"visitorId": raw_visitor}, {"visitorId": 1, "phoneE164": 1})
+                else:
+                    # ObjectId stored directly — look up by _id
+                    visitor_doc = db["visitors"].find_one({"_id": raw_visitor}, {"visitorId": 1, "phoneE164": 1})
+                if visitor_doc:
+                    result["visitor_id"] = visitor_doc.get("visitorId")
+                    if visitor_doc.get("phoneE164"):
+                        result["phone_number"] = visitor_doc["phoneE164"]
 
         # lead_id + phone — conversation.leadId (ObjectId) → leads._id
         raw_lead = conversation.get("leadId")
@@ -90,8 +98,8 @@ def get_identity_fields(client: pymongo.MongoClient, conversation: dict) -> dict
                 result["lead_id"] = lead_doc.get("leadId")
                 if lead_doc.get("phone") and not result["phone_number"]:
                     result["phone_number"] = lead_doc["phone"]
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[Identity] lookup failed: {e}")
     return result
 
 
