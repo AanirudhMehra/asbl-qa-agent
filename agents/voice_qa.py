@@ -79,27 +79,48 @@ def score_call(call: dict, kb: str, agent_prompt: str) -> dict:
     call_direction  = call.get("call_direction", "unknown")
     language_used   = call.get("language_used", "unknown")
     project         = call.get("project", "unknown")
+    phone_number    = call.get("phone_number", "")
+
+    # conversation_date = when the call actually happened (started_at or created_at)
+    raw_date = call.get("started_at") or call.get("created_at")
+    if raw_date is None:
+        conversation_date = None
+    elif isinstance(raw_date, datetime):
+        conversation_date = raw_date.isoformat()
+    else:
+        conversation_date = str(raw_date)
 
     if not transcript_text.strip():
-        return {"call_sid": call_sid, "status": "SKIPPED", "reason": "Empty transcript"}
+        return {
+            "call_sid":          call_sid,
+            "status":            "SKIPPED",
+            "reason":            "Empty transcript",
+            "phone_number":      phone_number,
+            "conversation_date": conversation_date,
+            "evaluated_at":      datetime.now().isoformat(),
+        }
 
     # Pre-filter: skip greetings and wrong-number calls before full evaluation
     label = classify_call(transcript_text)
     if label == "greeting":
         return {
-            "call_sid":       call_sid,
-            "call_direction": call_direction,
-            "status":         "SKIPPED",
-            "reason":         "Greeting / immediate hang-up — no evaluable content",
-            "evaluated_at":   datetime.now().isoformat(),
+            "call_sid":          call_sid,
+            "call_direction":    call_direction,
+            "status":            "SKIPPED",
+            "reason":            "Greeting / immediate hang-up — no evaluable content",
+            "phone_number":      phone_number,
+            "conversation_date": conversation_date,
+            "evaluated_at":      datetime.now().isoformat(),
         }
     if label == "spam":
         return {
-            "call_sid":       call_sid,
-            "call_direction": call_direction,
-            "status":         "SKIPPED",
-            "reason":         "Wrong number / silent / unrelated — not a real estate call",
-            "evaluated_at":   datetime.now().isoformat(),
+            "call_sid":          call_sid,
+            "call_direction":    call_direction,
+            "status":            "SKIPPED",
+            "reason":            "Wrong number / silent / unrelated — not a real estate call",
+            "phone_number":      phone_number,
+            "conversation_date": conversation_date,
+            "evaluated_at":      datetime.now().isoformat(),
         }
 
     # System message = static KB + agent prompt (cached by KV cache — sent once per batch)
@@ -130,13 +151,14 @@ Follow all instructions in the system prompt exactly.
 Return ONLY the JSON. Nothing else."""
 
     result = ask_json(user_msg, system=system_msg)
-    result["call_sid"] = call_sid
-    result["phone_number"] = call.get("phone_number", "")
-    result["call_direction"] = call_direction
-    result["language_used"] = language_used
-    result["project"] = project
-    result["evaluated_at"] = datetime.now().isoformat()
-    result["confidence"] = result.get("confidence", 0.5)  # default if LLM forgot
+    result["call_sid"]          = call_sid
+    result["phone_number"]      = phone_number
+    result["call_direction"]    = call_direction
+    result["language_used"]     = language_used
+    result["project"]           = project
+    result["conversation_date"] = conversation_date
+    result["evaluated_at"]      = datetime.now().isoformat()
+    result["confidence"]        = result.get("confidence", 0.5)
     return result
 
 
