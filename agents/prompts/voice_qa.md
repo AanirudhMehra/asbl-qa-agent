@@ -139,3 +139,4 @@ Rules for the detail field:
 FINAL CHECK: Before submitting, re-read each issue.
 1. Find the exact quoted words in the transcript above. If they are not there word-for-word → remove that issue.
 2. Confirm the line containing those words starts with "Anandita:" not "Caller:". If the quoted text was said by the Caller → remove that issue entirely. Callers can say anything — only Anandita's words are evaluated.
+3. If you cite a kb_reference, it MUST be one of: RULE-001, RULE-002, RULE-003, RULE-004, RULE-005, RULE-006, RULE-007, RULE-008, or a project fact ID (LOFT-XXX, SPEC-XXX, BWAY-XXX, LMRK-XXX, GST-XXX). If you cannot match the issue to one of these real IDs → remove that issue entirely. Do not invent rule numbers or corrections.
