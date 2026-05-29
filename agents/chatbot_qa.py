@@ -131,37 +131,50 @@ def score_conversation(conversation: dict, kb: str, agent_prompt: str,
             "reason": "Empty conversation"
         }
 
+    # conversation_date = when the chat actually happened (from prod createdAt)
+    # evaluated_at      = when the cron/backfill ran — these differ for backfills
+    raw_created = conversation.get("createdAt")
+    if raw_created is None:
+        conversation_date = None
+    elif isinstance(raw_created, datetime):
+        conversation_date = raw_created.isoformat()
+    else:
+        conversation_date = str(raw_created)
+
     # ── Layer 1: Regex spam filter (zero LLM cost) ───────────────────────────
     user_flags = flag_conversation(conversation.get("conversationDepth", []))
     if user_flags:
         flag_types = list({f["type"] for f in user_flags})
         print(f"[Chatbot QA] SPAM_FILTERED — {conversation_id} ({', '.join(flag_types)})")
         return {
-            "conversation_id": conversation_id,
-            "status":          "SKIPPED",
-            "skip_reason":     "SPAM_FILTERED",
-            "user_flags":      user_flags,
-            "turn_count":      conversation.get("turnCount", 0),
-            "evaluated_at":    datetime.now().isoformat(),
+            "conversation_id":  conversation_id,
+            "status":           "SKIPPED",
+            "skip_reason":      "SPAM_FILTERED",
+            "user_flags":       user_flags,
+            "turn_count":       conversation.get("turnCount", 0),
+            "conversation_date": conversation_date,
+            "evaluated_at":     datetime.now().isoformat(),
         }
 
     # ── Pre-filter: skip greetings and spam (LLM classifier) ────────────────
     label = classify_conversation(conversation_text)
     if label == "greeting":
         return {
-            "conversation_id": conversation_id,
-            "status": "SKIPPED",
-            "reason": "Greeting only — no evaluable content",
-            "turn_count": conversation.get("turnCount", 0),
-            "evaluated_at": datetime.now().isoformat(),
+            "conversation_id":  conversation_id,
+            "status":           "SKIPPED",
+            "reason":           "Greeting only — no evaluable content",
+            "turn_count":       conversation.get("turnCount", 0),
+            "conversation_date": conversation_date,
+            "evaluated_at":     datetime.now().isoformat(),
         }
     if label == "spam":
         return {
-            "conversation_id": conversation_id,
-            "status": "SKIPPED",
-            "reason": "Spam / off-topic — not a real estate conversation",
-            "turn_count": conversation.get("turnCount", 0),
-            "evaluated_at": datetime.now().isoformat(),
+            "conversation_id":  conversation_id,
+            "status":           "SKIPPED",
+            "reason":           "Spam / off-topic — not a real estate conversation",
+            "turn_count":       conversation.get("turnCount", 0),
+            "conversation_date": conversation_date,
+            "evaluated_at":     datetime.now().isoformat(),
         }
 
     # Fetch event-based signals for this session
@@ -203,11 +216,12 @@ Follow all instructions in the system prompt exactly.
 Return ONLY the JSON. Nothing else."""
 
     result = ask_json(user_msg, system=system_msg)
-    result["conversation_id"] = conversation_id
-    result["turn_count"]      = conversation.get("turnCount", 0)
-    result["evaluated_at"]    = datetime.now().isoformat()
-    result["confidence"]      = result.get("confidence", 0.5)
-    result["session_signals"] = signals
+    result["conversation_id"]   = conversation_id
+    result["turn_count"]        = conversation.get("turnCount", 0)
+    result["conversation_date"] = conversation_date
+    result["evaluated_at"]      = datetime.now().isoformat()
+    result["confidence"]        = result.get("confidence", 0.5)
+    result["session_signals"]   = signals
     # Layer 2: LLM may return user_flags for flagged user messages it noticed
     if "user_flags" not in result:
         result["user_flags"] = []
