@@ -60,6 +60,49 @@ def format_conversation(conversation_depth: list) -> str:
     return "\n".join(lines)
 
 
+def get_identity_fields(client: pymongo.MongoClient, conversation: dict) -> dict:
+    """
+    Look up visitor_id, lead_id, and phone_number for a conversation.
+    All three come from prod — visitors and leads collections.
+    Returns a dict with keys: visitor_id, lead_id, phone_number.
+    Falls back to None/empty string on any failure.
+    """
+    result = {"visitor_id": None, "lead_id": None, "phone_number": None}
+    if not client:
+        return result
+    try:
+        db = client["asbl_loft"]
+
+        # visitor_id — conversation.visitorId is usually a plain string like "v-xxx"
+        # but older docs may store it as an ObjectId.
+        # Ephemeral IDs ("v-ephemeral-*") have no visitors record — skip them.
+        raw_visitor = conversation.get("visitorId")
+        if raw_visitor:
+            is_ephemeral = isinstance(raw_visitor, str) and raw_visitor.startswith("v-ephemeral")
+            if not is_ephemeral:
+                if isinstance(raw_visitor, str):
+                    visitor_doc = db["visitors"].find_one({"visitorId": raw_visitor}, {"visitorId": 1, "phoneE164": 1})
+                else:
+                    # ObjectId stored directly — look up by _id
+                    visitor_doc = db["visitors"].find_one({"_id": raw_visitor}, {"visitorId": 1, "phoneE164": 1})
+                if visitor_doc:
+                    result["visitor_id"] = visitor_doc.get("visitorId")
+                    if visitor_doc.get("phoneE164"):
+                        result["phone_number"] = visitor_doc["phoneE164"]
+
+        # lead_id + phone — conversation.leadId (ObjectId) → leads._id
+        raw_lead = conversation.get("leadId")
+        if raw_lead:
+            lead_doc = db["leads"].find_one({"_id": raw_lead}, {"leadId": 1, "phone": 1})
+            if lead_doc:
+                result["lead_id"] = lead_doc.get("leadId")
+                if lead_doc.get("phone") and not result["phone_number"]:
+                    result["phone_number"] = lead_doc["phone"]
+    except Exception as e:
+        print(f"[Identity] lookup failed: {e}")
+    return result
+
+
 def get_session_signals(client: pymongo.MongoClient, session_id: str) -> dict:
     """
     Look up the events collection for this session and extract
@@ -141,6 +184,9 @@ def score_conversation(conversation: dict, kb: str, agent_prompt: str,
     else:
         conversation_date = str(raw_created)
 
+    # ── Identity enrichment (visitor_id, lead_id, phone_number) ────────────
+    identity = get_identity_fields(client, conversation)
+
     # ── Layer 1: Regex spam filter (zero LLM cost) ───────────────────────────
     user_flags = flag_conversation(conversation.get("conversationDepth", []))
     if user_flags:
@@ -154,6 +200,7 @@ def score_conversation(conversation: dict, kb: str, agent_prompt: str,
             "turn_count":       conversation.get("turnCount", 0),
             "conversation_date": conversation_date,
             "evaluated_at":     datetime.now().isoformat(),
+            **identity,
         }
 
     # ── Pre-filter: skip greetings and spam (LLM classifier) ────────────────
@@ -166,6 +213,7 @@ def score_conversation(conversation: dict, kb: str, agent_prompt: str,
             "turn_count":       conversation.get("turnCount", 0),
             "conversation_date": conversation_date,
             "evaluated_at":     datetime.now().isoformat(),
+            **identity,
         }
     if label == "spam":
         return {
@@ -175,6 +223,7 @@ def score_conversation(conversation: dict, kb: str, agent_prompt: str,
             "turn_count":       conversation.get("turnCount", 0),
             "conversation_date": conversation_date,
             "evaluated_at":     datetime.now().isoformat(),
+            **identity,
         }
 
     # Fetch event-based signals for this session
@@ -222,6 +271,9 @@ Return ONLY the JSON. Nothing else."""
     result["evaluated_at"]      = datetime.now().isoformat()
     result["confidence"]        = result.get("confidence", 0.5)
     result["session_signals"]   = signals
+    result["visitor_id"]        = identity.get("visitor_id")
+    result["lead_id"]           = identity.get("lead_id")
+    result["phone_number"]      = identity.get("phone_number")
     # Layer 2: LLM may return user_flags for flagged user messages it noticed
     if "user_flags" not in result:
         result["user_flags"] = []
