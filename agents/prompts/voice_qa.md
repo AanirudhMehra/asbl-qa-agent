@@ -136,4 +136,6 @@ Rules for the detail field:
 - Then state the correction
 - If you cannot start with an exact quote → delete this issue entirely
 
-FINAL CHECK: Before submitting, re-read each issue. Find the exact quoted words in the transcript above. If they are not there word-for-word → remove that issue.
+FINAL CHECK: Before submitting, re-read each issue.
+1. Find the exact quoted words in the transcript above. If they are not there word-for-word → remove that issue.
+2. Confirm the line containing those words starts with "Anandita:" not "Caller:". If the quoted text was said by the Caller → remove that issue entirely. Callers can say anything — only Anandita's words are evaluated.
